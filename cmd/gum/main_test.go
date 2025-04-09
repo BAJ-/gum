@@ -23,7 +23,7 @@ func TestRunCLI(t *testing.T) {
 		{
 			name:           "install",
 			args:           []string{"gum", "install", "1.24"},
-			expectedOutput: "Installing Go version 1.24",
+			expectedOutput: "Installing Go version go1.24",
 			expectedCode:   0,
 		},
 		{
@@ -35,7 +35,7 @@ func TestRunCLI(t *testing.T) {
 		{
 			name:           "uninstall",
 			args:           []string{"gum", "uninstall", "1.24"},
-			expectedOutput: "Uninstalling Go version 1.24",
+			expectedOutput: "Uninstalling Go version go1.24",
 			expectedCode:   0,
 		},
 		{
