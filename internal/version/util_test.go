@@ -1,6 +1,10 @@
 package version
 
-import "testing"
+import (
+	"os"
+	"path/filepath"
+	"testing"
+)
 
 func TestNormaliseVersion(t *testing.T) {
 	testCases := []struct {
@@ -55,6 +59,39 @@ func TestNormaliseVersion(t *testing.T) {
 				if result != tc.expected {
 					t.Errorf("Expected normaliseVersion(%q) = %q,  got %q", tc.input, result, tc.expected)
 				}
+			}
+		})
+	}
+}
+
+func TestExpandPath(t *testing.T) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		t.Skip("Skipping test because home folder could not be determined")
+	}
+
+	testCases := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "with HOME variable",
+			input:    "${HOME}/test",
+			expected: filepath.Join(home, "test"),
+		},
+		{
+			name:     "with HOME variable in the middle",
+			input:    "prefix/${HOME}/suffix",
+			expected: "prefix/${HOME}/suffix",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := expandPath(tc.input)
+			if result != tc.expected {
+				t.Errorf("Expected expandPath(%q) = %q, got %q", tc.input, result, tc.expected)
 			}
 		})
 	}
