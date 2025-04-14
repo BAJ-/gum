@@ -8,6 +8,8 @@ import (
 	"github.com/baj-/gum/internal/version"
 )
 
+var versionManager version.Manager = version.NewManager()
+
 func main() {
 	os.Exit(runCLI(os.Args, os.Stdout, os.Stderr))
 }
@@ -28,7 +30,7 @@ func runCLI(args []string, stdout, stderr io.Writer) int {
 			return 1
 		}
 		versionStr := args[2]
-		err := version.Install(versionStr, stdout)
+		err := versionManager.Install(versionStr, stdout)
 		if err != nil {
 			fmt.Fprintf(stderr, "Error installing Go %s: %v\n", versionStr, err)
 			return 1
@@ -41,7 +43,7 @@ func runCLI(args []string, stdout, stderr io.Writer) int {
 			return 1
 		}
 		versionStr := args[2]
-		err := version.Uninstall(versionStr, stdout)
+		err := versionManager.Uninstall(versionStr, stdout)
 		if err != nil {
 			fmt.Fprintf(stderr, "Error uninstalling Go %s: %v\n", versionStr, err)
 			return 1

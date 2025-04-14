@@ -2,11 +2,35 @@ package main
 
 import (
 	"bytes"
+	"fmt"
+	"io"
 	"strings"
 	"testing"
 )
 
+// MockVersionManager is a test implementation of version.Manager
+type MockVersionManager struct{}
+
+func (m *MockVersionManager) Install(version string, w io.Writer) error {
+	// Just write the expected output to indicate we're mocking the functionality
+	_, err := fmt.Fprintf(w, "Downloading https://golang.org/dl/go%s\n", version)
+	return err
+}
+
+func (m *MockVersionManager) Uninstall(version string, w io.Writer) error {
+	// Just write the expected output to indicate we're mocking the functionality
+	_, err := fmt.Fprintf(w, "Uninstalling Go version go%s\n", version)
+	return err
+}
+
 func TestRunCLI(t *testing.T) {
+	// Save the original manager and restore it after tests
+	originalManager := versionManager
+	defer func() { versionManager = originalManager }()
+
+	// Replace with mock for testing
+	versionManager = &MockVersionManager{}
+
 	testCases := []struct {
 		name           string
 		args           []string
@@ -23,7 +47,7 @@ func TestRunCLI(t *testing.T) {
 		{
 			name:           "install",
 			args:           []string{"gum", "install", "1.24"},
-			expectedOutput: "Installing Go version go1.24",
+			expectedOutput: "Downloading https://golang.org/dl/go1.24",
 			expectedCode:   0,
 		},
 		{
