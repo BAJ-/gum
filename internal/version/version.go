@@ -15,6 +15,7 @@ const (
 // VersionManager handles Go version installation and uninstallation
 type VersionManager struct {
 	fs         FileSystem
+	httpClient HTTPClient
 	installDir string
 }
 
@@ -22,6 +23,7 @@ type VersionManager struct {
 func NewManager() Manager {
 	return &VersionManager{
 		fs:         OSFileSystem{},
+		httpClient: NewDefaultHTTPClient(),
 		installDir: expandPath(defaultInstallDir, OSFileSystem{}),
 	}
 }
@@ -48,7 +50,7 @@ func (m *VersionManager) Install(v string, w io.Writer) error {
 	}
 
 	fmt.Fprintf(w, "Downloading %s...\n", downloadURL)
-	if err := downloadAndExtract(downloadURL, versionDir, w); err != nil {
+	if err := downloadAndExtract(downloadURL, versionDir, w, m.httpClient); err != nil {
 		m.fs.RemoveAll(versionDir)
 		return err
 	}

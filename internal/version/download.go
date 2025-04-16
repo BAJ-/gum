@@ -45,7 +45,7 @@ func getDownloadURL(v string) (string, error) {
 	}
 }
 
-func downloadAndExtract(url, destDir string, w io.Writer) error {
+func downloadAndExtract(url, destDir string, w io.Writer, client HTTPClient) error {
 	tmpFile, err := os.CreateTemp("", "gum-download-*")
 	if err != nil {
 		return fmt.Errorf("failed to create temporary file: %w", err)
@@ -55,7 +55,7 @@ func downloadAndExtract(url, destDir string, w io.Writer) error {
 	defer tmpFile.Close()
 	defer os.Remove(tmpFile.Name())
 
-	if err := downloadFile(url, tmpFile, w); err != nil {
+	if err := downloadFile(url, tmpFile, w, client); err != nil {
 		return err
 	}
 
@@ -82,7 +82,7 @@ func downloadAndExtract(url, destDir string, w io.Writer) error {
 	return nil
 }
 
-func downloadFile(url string, file *os.File, w io.Writer) error {
+func downloadFile(url string, file *os.File, w io.Writer, client HTTPClient) error {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
@@ -90,7 +90,7 @@ func downloadFile(url string, file *os.File, w io.Writer) error {
 
 	req.Header.Set("User-Agent", "gum/1.0")
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := client.Do(req)
 	if err != nil {
 		return fmt.Errorf("failed to download: %w", err)
 	}
@@ -109,7 +109,7 @@ func downloadFile(url string, file *os.File, w io.Writer) error {
 	}
 
 	// New line
-	fmt.Println(w)
+	fmt.Fprintln(w)
 
 	return nil
 }

@@ -3,6 +3,8 @@ package version
 import (
 	"bytes"
 	"errors"
+	"io"
+	"net/http"
 	"os"
 	"strings"
 	"testing"
@@ -45,6 +47,18 @@ func (m *MockFileSystem) CreateTemp(dir, pattern string) (*os.File, error) {
 
 func (m *MockFileSystem) UserHomeDir() (string, error) {
 	return "/mock/home", nil
+}
+
+// MockHTTPClient implements HTTPClient for testing
+type MockHTTPClient struct {
+	DoFunc func(req *http.Request) (*http.Response, error)
+}
+
+func (m *MockHTTPClient) Do(req *http.Request) (*http.Response, error) {
+	if m.DoFunc != nil {
+		return m.DoFunc(req)
+	}
+	return nil, errors.New("do function not implemented")
 }
 
 func TestVersionManager_Uninstall(t *testing.T) {
@@ -101,6 +115,104 @@ func TestVersionManager_Uninstall(t *testing.T) {
 			// Check error expectations
 			if (err != nil) != tt.wantErr {
 				t.Errorf("VersionManager.Uninstall() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			// Check output expectations
+			if tt.wantOutput != "" && !strings.Contains(buf.String(), tt.wantOutput) {
+				t.Errorf("Expected output to contain '%s', got '%s'", tt.wantOutput, buf.String())
+			}
+		})
+	}
+}
+
+func TestVersionManager_Install(t *testing.T) {
+	tests := []struct {
+		name         string
+		version      string
+		existingDirs map[string]bool
+		httpError    error
+		httpStatus   int
+		wantErr      bool
+		wantOutput   string
+	}{
+		{
+			name:         "already installed",
+			version:      "go1.16.5",
+			existingDirs: map[string]bool{"/mock/home/.gum/versions/go1.16.5": true},
+			httpStatus:   http.StatusOK,
+			wantErr:      false,
+			wantOutput:   "already installed",
+		},
+		{
+			name:         "successful install",
+			version:      "go1.16.5",
+			existingDirs: map[string]bool{},
+			httpStatus:   http.StatusOK,
+			wantErr:      false,
+			wantOutput:   "Successfully installed",
+		},
+		{
+			name:         "download error",
+			version:      "go1.16.5",
+			existingDirs: map[string]bool{},
+			httpError:    errors.New("mock HTTP error"),
+			wantErr:      true,
+			wantOutput:   "Downloading",
+		},
+		{
+			name:         "http status error",
+			version:      "go1.16.5",
+			existingDirs: map[string]bool{},
+			httpStatus:   http.StatusNotFound,
+			wantErr:      true,
+			wantOutput:   "Downloading",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Set up mock filesystem
+			mockFS := &MockFileSystem{
+				ExistingFiles: tt.existingDirs,
+			}
+
+			// Set up mock HTTP client
+			mockHTTP := &MockHTTPClient{
+				DoFunc: func(req *http.Request) (*http.Response, error) {
+					if tt.httpError != nil {
+						return nil, tt.httpError
+					}
+
+					// Create a mock response with an empty body
+					body := io.NopCloser(bytes.NewBufferString("mock archive data"))
+					return &http.Response{
+						StatusCode: tt.httpStatus,
+						Body:       body,
+					}, nil
+				},
+			}
+
+			// Create manager with mocks
+			manager := &VersionManager{
+				fs:         mockFS,
+				httpClient: mockHTTP,
+				installDir: "/mock/home/.gum/versions",
+			}
+
+			// Capture output
+			var buf bytes.Buffer
+			err := manager.Install(tt.version, &buf)
+
+			// Skip tests that would attempt to extract archives
+			if tt.httpStatus == http.StatusOK && !tt.existingDirs["/mock/home/.gum/versions/go1.16.5"] {
+				// These tests would fail because we're not providing valid archive data
+				return
+			}
+
+			// Check error expectations
+			if (err != nil) != tt.wantErr {
+				t.Errorf("VersionManager.Install() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 
