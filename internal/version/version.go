@@ -44,9 +44,24 @@ func Install(v string, w io.Writer) error {
 }
 
 func Uninstall(v string, w io.Writer) error {
-
 	v = normaliseVersion(v)
 
+	installDir := expandPath(defaultInstallDir)
+	versionDir := filepath.Join(installDir, v)
+
 	fmt.Fprintf(w, "Uninstalling Go version %s\n", v)
+
+	// Check if the version is installed
+	if _, err := os.Stat(versionDir); os.IsNotExist(err) {
+		fmt.Fprintf(w, "Go %s is not installed at %s\n", v, versionDir)
+		return nil
+	}
+
+	// Remove the version directory
+	if err := os.RemoveAll(versionDir); err != nil {
+		return fmt.Errorf("failed to uninstall Go %s: %w", v, err)
+	}
+
+	fmt.Fprintf(w, "Successfully uninstalled Go %s from %s\n", v, versionDir)
 	return nil
 }
