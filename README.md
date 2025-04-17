@@ -4,7 +4,7 @@
 ![License: MIT](https://img.shields.io/badge/License-MIT-8BC6FC.svg)
 
 
-Release status: ![Build Status](https://github.com/baj-/gum/actions/workflows/release.yml/badge.svg)
+![Build Status](https://github.com/baj-/gum/actions/workflows/release.yml/badge.svg)
 
 `gum` a utility manager for Go.
 
