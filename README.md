@@ -1,6 +1,6 @@
 # gum - Go Utility Manager
 
-![gum version](https://img.shields.io/github/v/release/baj-/gum?label=version)
+![gum version](https://img.shields.io/github/v/release/baj-/gum?label=version&color=77DD77)
 ![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
 ![Build Status](https://github.com/baj-/gum/actions/workflows/release.yml/badge.svg)
 
