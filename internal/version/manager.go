@@ -6,4 +6,5 @@ import "io"
 type Manager interface {
 	Install(version string, w io.Writer) error
 	Uninstall(version string, w io.Writer) error
+	Use(version string, w io.Writer) error
 }

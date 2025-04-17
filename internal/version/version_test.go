@@ -12,9 +12,10 @@ import (
 
 // MockFileSystem implements FileSystem for testing
 type MockFileSystem struct {
-	ExistingFiles map[string]bool
-	DirError      error
-	RemoveError   error
+	ExistingFiles   map[string]bool
+	DirError        error
+	RemoveError     error
+	SymlinkMappings map[string]string // Maps symlink name to target
 }
 
 func (m *MockFileSystem) Stat(name string) (os.FileInfo, error) {
@@ -47,6 +48,39 @@ func (m *MockFileSystem) CreateTemp(dir, pattern string) (*os.File, error) {
 
 func (m *MockFileSystem) UserHomeDir() (string, error) {
 	return "/mock/home", nil
+}
+
+func (m *MockFileSystem) Symlink(oldname, newname string) error {
+	if m.SymlinkMappings == nil {
+		m.SymlinkMappings = make(map[string]string)
+	}
+	m.SymlinkMappings[newname] = oldname
+	m.ExistingFiles[newname] = true
+	return nil
+}
+
+func (m *MockFileSystem) ReadLink(name string) (string, error) {
+	if m.SymlinkMappings == nil {
+		return "", os.ErrNotExist
+	}
+
+	if target, ok := m.SymlinkMappings[name]; ok {
+		return target, nil
+	}
+	return "", os.ErrNotExist
+}
+
+func (m *MockFileSystem) Remove(name string) error {
+	if m.RemoveError != nil {
+		return m.RemoveError
+	}
+
+	delete(m.ExistingFiles, name)
+	if m.SymlinkMappings != nil {
+		delete(m.SymlinkMappings, name)
+	}
+
+	return nil
 }
 
 // MockHTTPClient implements HTTPClient for testing
@@ -219,6 +253,117 @@ func TestVersionManager_Install(t *testing.T) {
 			// Check output expectations
 			if tt.wantOutput != "" && !strings.Contains(buf.String(), tt.wantOutput) {
 				t.Errorf("Expected output to contain '%s', got '%s'", tt.wantOutput, buf.String())
+			}
+		})
+	}
+}
+
+func TestVersionManager_Use(t *testing.T) {
+	tests := []struct {
+		name         string
+		version      string
+		existingDirs map[string]bool
+		existingLink map[string]string
+		wantErr      bool
+		wantOutput   string
+		wantErrMsg   string
+	}{
+		{
+			name:    "use version success",
+			version: "go1.16.5",
+			existingDirs: map[string]bool{
+				"/mock/home/.gum/versions/go1.16.5":        true,
+				"/mock/home/.gum/versions/go1.16.5/bin/go": true,
+			},
+			existingLink: nil,
+			wantErr:      false,
+			wantOutput:   "Successfully set Go go1.16.5 as the active version",
+		},
+		{
+			name:         "version not installed",
+			version:      "go1.16.5",
+			existingDirs: map[string]bool{},
+			existingLink: nil,
+			wantErr:      true,
+			wantErrMsg:   "is not installed",
+		},
+		{
+			name:    "already the active version",
+			version: "go1.16.5",
+			existingDirs: map[string]bool{
+				"/mock/home/.gum/versions/go1.16.5":        true,
+				"/mock/home/.gum/versions/go1.16.5/bin/go": true,
+				"/mock/home/.gum/bin/go":                   true,
+			},
+			existingLink: map[string]string{
+				"/mock/home/.gum/bin/go": "/mock/home/.gum/versions/go1.16.5/bin/go",
+			},
+			wantErr:    false,
+			wantOutput: "already the active version",
+		},
+		{
+			name:    "switch from different version",
+			version: "go1.16.5",
+			existingDirs: map[string]bool{
+				"/mock/home/.gum/versions/go1.16.5":        true,
+				"/mock/home/.gum/versions/go1.16.5/bin/go": true,
+				"/mock/home/.gum/bin/go":                   true,
+			},
+			existingLink: map[string]string{
+				"/mock/home/.gum/bin/go": "/mock/home/.gum/versions/go1.15.0/bin/go",
+			},
+			wantErr:    false,
+			wantOutput: "Successfully set Go go1.16.5 as the active version",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Set up mock filesystem
+			mockFS := &MockFileSystem{
+				ExistingFiles:   tt.existingDirs,
+				SymlinkMappings: tt.existingLink,
+			}
+
+			// Create manager with mocks
+			manager := &VersionManager{
+				fs:         mockFS,
+				installDir: "/mock/home/.gum/versions",
+			}
+
+			// Capture output
+			var buf bytes.Buffer
+			err := manager.Use(tt.version, &buf)
+
+			// Check error expectations
+			if (err != nil) != tt.wantErr {
+				t.Errorf("VersionManager.Use() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			// Check error message if expected
+			if tt.wantErrMsg != "" && err != nil {
+				if !strings.Contains(err.Error(), tt.wantErrMsg) {
+					t.Errorf("Expected error to contain '%s', got '%s'", tt.wantErrMsg, err.Error())
+				}
+			}
+
+			// Check output expectations
+			if tt.wantOutput != "" && !strings.Contains(buf.String(), tt.wantOutput) {
+				t.Errorf("Expected output to contain '%s', got '%s'", tt.wantOutput, buf.String())
+			}
+
+			// Verify symlink was created correctly for success cases
+			if !tt.wantErr && tt.name != "already the active version" {
+				expectedTarget := "/mock/home/.gum/versions/go1.16.5/bin/go"
+				linkPath := "/mock/home/.gum/bin/go"
+
+				actualTarget, exists := mockFS.SymlinkMappings[linkPath]
+				if !exists {
+					t.Errorf("Expected symlink at '%s' was not created", linkPath)
+				} else if actualTarget != expectedTarget {
+					t.Errorf("Symlink target = %v, want %v", actualTarget, expectedTarget)
+				}
 			}
 		})
 	}

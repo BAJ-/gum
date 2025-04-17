@@ -23,6 +23,12 @@ func (m *MockVersionManager) Uninstall(version string, w io.Writer) error {
 	return err
 }
 
+func (m *MockVersionManager) Use(version string, w io.Writer) error {
+	// Just write the expected output to indicate we're mocking the functionality
+	_, err := fmt.Fprintf(w, "Setting Go go%s as active version\n", version)
+	return err
+}
+
 func TestRunCLI(t *testing.T) {
 	// Save the original manager and restore it after tests
 	originalManager := versionManager
@@ -69,6 +75,18 @@ func TestRunCLI(t *testing.T) {
 			expectedCode: 1,
 		},
 		{
+			name:           "use",
+			args:           []string{"gum", "use", "1.24"},
+			expectedOutput: "Setting Go go1.24 as active version",
+			expectedCode:   0,
+		},
+		{
+			name:         "use without version",
+			args:         []string{"gum", "use"},
+			expectedErr:  "Error: no version provided",
+			expectedCode: 1,
+		},
+		{
 			name:         "unknown command",
 			args:         []string{"gum", "llatsni"},
 			expectedErr:  "Unknown command: llatsni",
@@ -105,6 +123,7 @@ func TestPrintUsage(t *testing.T) {
 		"Usage:",
 		"gum install <version>",
 		"gum uninstall <version>",
+		"gum use <version>",
 	}
 
 	for _, exp := range expected {

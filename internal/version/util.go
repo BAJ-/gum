@@ -3,6 +3,8 @@ package version
 import (
 	"fmt"
 	"io"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -15,6 +17,23 @@ func normaliseVersion(v string) string {
 		return "go" + v
 	}
 	return v
+}
+
+// isDirectoryInPath checks if the given directory is in the PATH environment variable
+func isDirectoryInPath(dir string) bool {
+	pathEnv := os.Getenv("PATH")
+	paths := filepath.SplitList(pathEnv)
+
+	// Normalize the directory path for comparison
+	dir = filepath.Clean(dir)
+
+	for _, path := range paths {
+		if filepath.Clean(path) == dir {
+			return true
+		}
+	}
+
+	return false
 }
 
 type progressWriter struct {

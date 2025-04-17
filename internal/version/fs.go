@@ -11,6 +11,9 @@ type FileSystem interface {
 	RemoveAll(path string) error
 	CreateTemp(dir, pattern string) (*os.File, error)
 	UserHomeDir() (string, error)
+	Symlink(oldname, newname string) error
+	ReadLink(name string) (string, error)
+	Remove(name string) error
 }
 
 // OSFileSystem implements FileSystem using the os package
@@ -34,4 +37,16 @@ func (fs OSFileSystem) CreateTemp(dir, pattern string) (*os.File, error) {
 
 func (fs OSFileSystem) UserHomeDir() (string, error) {
 	return os.UserHomeDir()
+}
+
+func (fs OSFileSystem) Symlink(oldname, newname string) error {
+	return os.Symlink(oldname, newname)
+}
+
+func (fs OSFileSystem) ReadLink(name string) (string, error) {
+	return os.Readlink(name)
+}
+
+func (fs OSFileSystem) Remove(name string) error {
+	return os.Remove(name)
 }
