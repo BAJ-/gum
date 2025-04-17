@@ -5,6 +5,7 @@
 
 
 ![Build Status](https://github.com/baj-/gum/actions/workflows/release.yml/badge.svg)
+![Tests](https://github.com/baj-/gum/actions/workflows/tests.yml/badge.svg)
 
 `gum` a utility manager for Go.
 
