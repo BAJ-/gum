@@ -1,5 +1,12 @@
 # gum - Go Utility Manager
 
+![gum version](https://img.shields.io/github/v/release/baj-/gum?label=version&color=77DD77)
+![License: MIT](https://img.shields.io/badge/License-MIT-8BC6FC.svg)
+
+
+![Build Status](https://github.com/baj-/gum/actions/workflows/release.yml/badge.svg)
+![Tests](https://github.com/baj-/gum/actions/workflows/test.yml/badge.svg)
+
 `gum` a utility manager for Go.
 
 ## Installation
