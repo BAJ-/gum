@@ -136,14 +136,6 @@ func (m *VersionManager) Use(v string, w io.Writer) error {
 
 	fmt.Fprintf(w, "Successfully set Go %s as the active version\n", v)
 
-	// Check if the bin directory is in PATH and give instructions if not
-	if !isDirectoryInPath(binDir) {
-		fmt.Fprintf(w, "\nNOTE: The gum bin directory is not in your path. To use gum make sure to add this to your PATH:\n")
-		fmt.Fprintf(w, "  %s\n", binDir)
-		fmt.Fprintf(w, "\nFor example, add this to your shell profile:\n")
-		fmt.Fprintf(w, "  export PATH=\"%s:$PATH\"\n", binDir)
-	}
-
 	return nil
 }
 
