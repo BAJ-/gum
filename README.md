@@ -36,6 +36,12 @@ gum use 1.24.2
 gum uninstall 1.24.2
 ```
 
+### List installed versions
+
+```bash
+gum list
+```
+
 ## License
 
 [MIT License](LICENSE)

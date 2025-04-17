@@ -83,6 +83,17 @@ func (m *MockFileSystem) Remove(name string) error {
 	return nil
 }
 
+func (m *MockFileSystem) EvalSymlinks(path string) (string, error) {
+	if !m.ExistingFiles[path] {
+		return "", os.ErrNotExist
+	}
+
+	if target, ok := m.SymlinkMappings[path]; ok {
+		return target, nil
+	}
+	return path, nil
+}
+
 // MockHTTPClient implements HTTPClient for testing
 type MockHTTPClient struct {
 	DoFunc func(req *http.Request) (*http.Response, error)

@@ -139,6 +139,55 @@ func (m *VersionManager) Use(v string, w io.Writer) error {
 	return nil
 }
 
+func (m *VersionManager) List(w io.Writer) error {
+	entries, err := os.ReadDir(m.installDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			fmt.Fprintln(w, "No Go versions installed yet")
+			return nil
+		}
+
+		return fmt.Errorf("failed to read versions directory: %w", err)
+	}
+
+	if len(entries) == 0 {
+		fmt.Fprintln(w, "No Go versions installed yet")
+		return nil
+	}
+
+	// Find active version, if any
+	activeVersion := ""
+	home, _ := m.fs.UserHomeDir()
+	binDir := filepath.Join(home, ".gum", "bin")
+	// Full path to the 'go' command symlink
+	linkPath := filepath.Join(binDir, "go")
+
+	resolvedPath, err := filepath.EvalSymlinks(linkPath)
+	if err == nil {
+		// The version binary is stored two folders deep in the version folder,
+		// so we need to go two folders up to get the version
+		versionDir := filepath.Dir(filepath.Dir(resolvedPath))
+		// Then we can get the version from the folder name
+		activeVersion = filepath.Base(versionDir)
+	}
+
+	fmt.Fprintln(w, "Installed Go versions:")
+
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+
+		version := entry.Name()
+		if version == activeVersion {
+			fmt.Fprintf(w, "* %s (active)\n", version)
+		} else {
+			fmt.Fprintf(w, "  %s\n", version)
+		}
+	}
+	return nil
+}
+
 // Utility function to expand paths using the filesystem
 func expandPath(path string, fs FileSystem) string {
 	if strings.HasPrefix(path, "${HOME}") {

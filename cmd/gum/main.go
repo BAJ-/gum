@@ -62,6 +62,13 @@ func runCLI(args []string, stdout, stderr io.Writer) int {
 			return 1
 		}
 		return 0
+	case "list":
+		err := versionManager.List(stdout)
+		if err != nil {
+			fmt.Fprintf(stderr, "Error listing Go versions: %v\n", err)
+			return 1
+		}
+		return 0
 	default:
 		fmt.Fprintf(stderr, "Unknown command: %s\n", command)
 		printUsage(stderr)
@@ -75,4 +82,5 @@ func printUsage(w io.Writer) {
 	fmt.Fprintln(w, "  gum install <version>   - Install a specific Go version")
 	fmt.Fprintln(w, "  gum uninstall <version> - Uninstall a specific Go version")
 	fmt.Fprintln(w, "  gum use <version>       - Use a specific Go version")
+	fmt.Fprintln(w, "  gum list                - List installed versions")
 }
