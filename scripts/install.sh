@@ -31,8 +31,16 @@ mkdir -p "$INSTALL_DIR"
 # Download and extract
 echo "Downloading gum $VERSION for $OS/$ARCH..."
 DOWNLOAD_URL="https://github.com/baj-/gum/releases/download/v$VERSION/gum-$VERSION-$OS-$ARCH.tar.gz"
-curl -L "$DOWNLOAD_URL" | tar xz -C "$INSTALL_DIR"
-mv "$INSTALL_DIR/gum-$OS-$ARCH" "$INSTALL_DIR/gum"
+
+# Create a temporary directory for extraction
+TMP_DIR=$(mktemp -d)
+trap 'rm -rf "$TMP_DIR"' EXIT
+
+# Download and extract to temp directory
+curl -L "$DOWNLOAD_URL" | tar xz -C "$TMP_DIR"
+
+# Move binary and make it executable
+mv "$TMP_DIR/gum" "$INSTALL_DIR/gum"
 chmod +x "$INSTALL_DIR/gum"
 
 echo "gum has been installed to $INSTALL_DIR/gum"
@@ -40,7 +48,7 @@ echo ""
 echo "To use gum, add the following to your shell profile:"
 echo "  export PATH=\"\$HOME/.gum/bin:\$PATH\""
 echo ""
-echo "Then you can run:"
+echo "Then source your updated profile. After tha you can run:"
 echo "  gum install <version>   # Install Go version"
 echo "  gum uninstall <version> # Uninstall Go version"
 echo "  gum use <version>       # Use Go version"

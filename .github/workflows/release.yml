@@ -12,41 +12,46 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-        
+
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
           go-version: '1.24.2'
-          
+
       - name: Build binaries
         run: |
           mkdir -p dist
-          
+
           # Get version from tag
           VERSION=${GITHUB_REF#refs/tags/}
           VERSION_NUM=${VERSION#v}
-          
+
           # Build for macOS (arm64)
-          GOOS=darwin GOARCH=arm64 go build -o dist/gum-darwin-arm64 ./cmd/gum
-          tar -czf dist/gum-${VERSION_NUM}-darwin-arm64.tar.gz -C dist gum-darwin-arm64
-          
+          GOOS=darwin GOARCH=arm64 go build -o dist/gum ./cmd/gum
+          tar -czf dist/gum-${VERSION_NUM}-darwin-arm64.tar.gz -C dist gum
+
           # Build for macOS (amd64)
-          GOOS=darwin GOARCH=amd64 go build -o dist/gum-darwin-amd64 ./cmd/gum
-          tar -czf dist/gum-${VERSION_NUM}-darwin-amd64.tar.gz -C dist gum-darwin-amd64
-          
+          GOOS=darwin GOARCH=amd64 go build -o dist/gum ./cmd/gum
+          tar -czf dist/gum-${VERSION_NUM}-darwin-amd64.tar.gz -C dist gum
+
           # Build for Linux (amd64)
-          GOOS=linux GOARCH=amd64 go build -o dist/gum-linux-amd64 ./cmd/gum
-          tar -czf dist/gum-${VERSION_NUM}-linux-amd64.tar.gz -C dist gum-linux-amd64
-          
+          GOOS=linux GOARCH=amd64 go build -o dist/gum ./cmd/gum
+          tar -czf dist/gum-${VERSION_NUM}-linux-amd64.tar.gz -C dist gum
+
           # Build for Linux (arm64)
-          GOOS=linux GOARCH=arm64 go build -o dist/gum-linux-arm64 ./cmd/gum
-          tar -czf dist/gum-${VERSION_NUM}-linux-arm64.tar.gz -C dist gum-linux-arm64
+          GOOS=linux GOARCH=arm64 go build -o dist/gum ./cmd/gum
+          tar -czf dist/gum-${VERSION_NUM}-linux-arm64.tar.gz -C dist gum
+
+          # Generate checksums
+          cd dist
+          sha256sum *.tar.gz > checksums.txt
           
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
           files: |
             dist/*.tar.gz
+            dist/checksums.txt
           generate_release_notes: true
           draft: false
         env:
