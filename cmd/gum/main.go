@@ -50,12 +50,11 @@ func runCLI(args []string, stdout, stderr io.Writer) int {
 		}
 		return 0
 	case "use":
-		if len(args) < 3 {
-			fmt.Fprintln(stderr, "Error: no version provided")
-			printUsage(stderr)
-			return 1
+		versionStr := ""
+		if len(args) >= 3 {
+			versionStr = args[2]
 		}
-		versionStr := args[2]
+
 		err := versionManager.Use(versionStr, stdout)
 		if err != nil {
 			fmt.Fprintf(stderr, "Error setting Go %s as active: %v\n", versionStr, err)

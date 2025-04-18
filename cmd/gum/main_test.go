@@ -87,10 +87,10 @@ func TestRunCLI(t *testing.T) {
 			expectedCode:   0,
 		},
 		{
-			name:         "use without version",
-			args:         []string{"gum", "use"},
-			expectedErr:  "Error: no version provided",
-			expectedCode: 1,
+			name:           "use without version",
+			args:           []string{"gum", "use"},
+			expectedOutput: "",
+			expectedCode:   0,
 		},
 		{
 			name:           "list versions",

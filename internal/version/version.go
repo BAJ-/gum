@@ -1,6 +1,7 @@
 package version
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 	"os"
@@ -83,6 +84,15 @@ func (m *VersionManager) Uninstall(v string, w io.Writer) error {
 
 // Use creates a symlink to make the specified Go version active
 func (m *VersionManager) Use(v string, w io.Writer) error {
+	if v == "" {
+		goModVersion, err := detectVersionInGoMod(m.fs)
+		if err != nil {
+			return fmt.Errorf("Failed to detect version in go.mod: %w", err)
+		}
+		v = goModVersion
+		fmt.Fprintf(w, "Detected Go %s from go.mod\n", v)
+	}
+
 	v = normaliseVersion(v)
 	versionDir := filepath.Join(m.installDir, v)
 
@@ -197,4 +207,37 @@ func expandPath(path string, fs FileSystem) string {
 		}
 	}
 	return path
+}
+
+// detectVersionInGoMod read go.mod in current directory
+// and tries to extract the Go version
+func detectVersionInGoMod(fs FileSystem) (string, error) {
+
+	if _, err := fs.Stat("go.mod"); os.IsNotExist(err) {
+		return "", nil
+	}
+
+	modFile, err := os.Open("go.mod")
+	if err != nil {
+		return "", fmt.Errorf("could not open go.mod file: %w", err)
+	}
+	defer modFile.Close()
+
+	// Read the file line by line to find the go version
+	scanner := bufio.NewScanner(modFile)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		// Look for lines that start with 'go'
+		if strings.HasPrefix(line, "go ") {
+			version := strings.TrimPrefix(line, "go ")
+			// Assume the first line we find that starts with 'go'
+			// Is the one that defines the Go version
+			if version == "" {
+				return "", fmt.Errorf("invalid Go version format in go.mod")
+			}
+			return version, nil
+		}
+	}
+
+	return "", fmt.Errorf("no Go version found in go.mod")
 }
