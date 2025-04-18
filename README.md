@@ -37,10 +37,23 @@ gum install 1.24.2
 gum use 1.24.2
 ```
 
+or
+
+```bash
+gum use
+```
+The version specified in your `go.mod` will be set as active.
+
 ### Uninstall a Go version
 
 ```bash
 gum uninstall 1.24.2
+```
+
+### List installed versions
+
+```bash
+gum list
 ```
 
 ## License
