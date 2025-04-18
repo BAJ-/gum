@@ -78,8 +78,8 @@ func runCLI(args []string, stdout, stderr io.Writer) int {
 func printUsage(w io.Writer) {
 	fmt.Fprintln(w, "Go Utility Manager (gum)")
 	fmt.Fprintln(w, "Usage:")
-	fmt.Fprintln(w, "  gum install <version>   - Install a specific Go version")
-	fmt.Fprintln(w, "  gum uninstall <version> - Uninstall a specific Go version")
-	fmt.Fprintln(w, "  gum use <version>       - Use a specific Go version")
-	fmt.Fprintln(w, "  gum list                - List installed versions")
+	fmt.Fprintln(w, "  gum install <version>   - Install Go version")
+	fmt.Fprintln(w, "  gum uninstall <version> - Uninstall Go version")
+	fmt.Fprintln(w, "  gum use <version>       - Use Go version (uses go.mod if no version is provided)")
+	fmt.Fprintln(w, "  gum list                - List installed Go versions")
 }
