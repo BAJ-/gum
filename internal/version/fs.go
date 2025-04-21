@@ -1,7 +1,9 @@
 package version
 
 import (
+	"io"
 	"os"
+	"path/filepath"
 )
 
 // FileSystem abstracts file system operations for better testability
@@ -14,6 +16,8 @@ type FileSystem interface {
 	Symlink(oldname, newname string) error
 	ReadLink(name string) (string, error)
 	Remove(name string) error
+	EvalSymlinks(path string) (string, error)
+	Open(name string) (io.ReadCloser, error)
 }
 
 // OSFileSystem implements FileSystem using the os package
@@ -49,4 +53,12 @@ func (fs OSFileSystem) ReadLink(name string) (string, error) {
 
 func (fs OSFileSystem) Remove(name string) error {
 	return os.Remove(name)
+}
+
+func (fs OSFileSystem) EvalSymlinks(path string) (string, error) {
+	return filepath.EvalSymlinks(path)
+}
+
+func (fs OSFileSystem) Open(name string) (io.ReadCloser, error) {
+	return os.Open(name)
 }

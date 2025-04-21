@@ -29,6 +29,12 @@ func (m *MockVersionManager) Use(version string, w io.Writer) error {
 	return err
 }
 
+func (m *MockVersionManager) List(w io.Writer) error {
+	// Just write some expected output
+	_, err := fmt.Fprintf(w, "Installed Go versions:\n  go1.24\n")
+	return err
+}
+
 func TestRunCLI(t *testing.T) {
 	// Save the original manager and restore it after tests
 	originalManager := versionManager
@@ -81,10 +87,16 @@ func TestRunCLI(t *testing.T) {
 			expectedCode:   0,
 		},
 		{
-			name:         "use without version",
-			args:         []string{"gum", "use"},
-			expectedErr:  "Error: no version provided",
-			expectedCode: 1,
+			name:           "use without version",
+			args:           []string{"gum", "use"},
+			expectedOutput: "",
+			expectedCode:   0,
+		},
+		{
+			name:           "list versions",
+			args:           []string{"gum", "list"},
+			expectedOutput: "Installed Go versions:",
+			expectedCode:   0,
 		},
 		{
 			name:         "unknown command",
