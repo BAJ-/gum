@@ -282,3 +282,74 @@ func TestFetchAvailableVersions(t *testing.T) {
 		}
 	}
 }
+
+func TestSemanticVersionSorting(t *testing.T) {
+	// Mock HTTP client for testing
+	mockClient := &MockHTTPClient{
+		DoFunc: func(req *http.Request) (*http.Response, error) {
+			jsonContent := `[
+				{
+					"version": "go1.23.9",
+					"stable": true,
+					"files": []
+				},
+				{
+					"version": "go1.23.10",
+					"stable": true,
+					"files": []
+				},
+				{
+					"version": "go1.23.2",
+					"stable": true,
+					"files": []
+				},
+				{
+					"version": "go1.24.1",
+					"stable": true,
+					"files": []
+				}
+			]`
+
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       io.NopCloser(strings.NewReader(jsonContent)),
+			}, nil
+		},
+	}
+
+	result, err := resolveVersion("1.23", mockClient)
+	if err != nil {
+		t.Fatalf("resolveVersion() error = %v", err)
+	}
+
+	expected := "go1.23.10"
+	if result != expected {
+		t.Errorf("resolveVersion('1.23') = %q, want %q", result, expected)
+	}
+}
+
+func TestCompareVersions(t *testing.T) {
+	testCases := []struct {
+		name     string
+		a        string
+		b        string
+		expected bool // a < b
+	}{
+		{"1.23.9 < 1.23.10", "go1.23.9", "go1.23.10", true},
+		{"1.23.10 > 1.23.9", "go1.23.10", "go1.23.9", false},
+		{"1.23.2 < 1.23.9", "go1.23.2", "go1.23.9", true},
+		{"1.23.9 < 1.24.1", "go1.23.9", "go1.24.1", true},
+		{"1.24.1 > 1.23.10", "go1.24.1", "go1.23.10", false},
+		{"same versions", "go1.23.9", "go1.23.9", false},
+		{"without go prefix", "1.23.9", "1.23.10", true},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := compareVersions(tc.a, tc.b)
+			if result != tc.expected {
+				t.Errorf("compareVersions(%q, %q) = %v, want %v", tc.a, tc.b, result, tc.expected)
+			}
+		})
+	}
+}

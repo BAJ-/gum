@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -125,6 +126,33 @@ func isMajorMinorVersion(v string) bool {
 	return majorMinorRegex.MatchString(v)
 }
 
+// compareVersions compares two Go version strings semantically
+// Returns true if a < b
+func compareVersions(a, b string) bool {
+	a = strings.TrimPrefix(a, "go")
+	b = strings.TrimPrefix(b, "go")
+
+	aParts := strings.Split(a, ".")
+	bParts := strings.Split(b, ".")
+
+	for i := 0; i < 3; i++ {
+		var aVal, bVal int
+
+		if i < len(aParts) {
+			aVal, _ = strconv.Atoi(aParts[i])
+		}
+		if i < len(bParts) {
+			bVal, _ = strconv.Atoi(bParts[i])
+		}
+
+		if aVal != bVal {
+			return aVal < bVal
+		}
+	}
+
+	return false // versions are equal
+}
+
 // findLatestPatchVersion finds the latest patch version for a given major.minor version
 func findLatestPatchVersion(majorMinor string, client HTTPClient) (string, error) {
 	versions, err := fetchAvailableVersions(client)
@@ -146,7 +174,9 @@ func findLatestPatchVersion(majorMinor string, client HTTPClient) (string, error
 		return "", fmt.Errorf("no versions found for %s", majorMinor)
 	}
 
-	sort.Sort(sort.Reverse(sort.StringSlice(matchingVersions)))
+	sort.Slice(matchingVersions, func(i, j int) bool {
+		return compareVersions(matchingVersions[j], matchingVersions[i]) // reverse for newest first
+	})
 
 	return matchingVersions[0], nil
 }
