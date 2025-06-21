@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	BaseURL = "https://golang.org/dl"
+	BaseURL = "https://go.dev/dl"
 )
 
 func getDownloadURL(v string) (string, error) {

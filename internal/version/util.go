@@ -1,10 +1,13 @@
 package version
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
-	"os"
-	"path/filepath"
+	"net/http"
+	"regexp"
+	"sort"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -17,23 +20,6 @@ func normaliseVersion(v string) string {
 		return "go" + v
 	}
 	return v
-}
-
-// isDirectoryInPath checks if the given directory is in the PATH environment variable
-func isDirectoryInPath(dir string) bool {
-	pathEnv := os.Getenv("PATH")
-	paths := filepath.SplitList(pathEnv)
-
-	// Normalize the directory path for comparison
-	dir = filepath.Clean(dir)
-
-	for _, path := range paths {
-		if filepath.Clean(path) == dir {
-			return true
-		}
-	}
-
-	return false
 }
 
 type progressWriter struct {
@@ -102,4 +88,140 @@ func formatBytes(bytes int64) string {
 	// Above 1MB
 	megaBytes := float64(bytes) / (float64(oneKB) * float64(oneKB))
 	return fmt.Sprintf("%.1f MB", megaBytes)
+}
+
+// resolveVersion resolves a version string to the full version
+// If the version is already complete (e.g., "1.23.4"), it returns as-is
+// If the version is major.minor (e.g., "1.23"), it finds the latest patch version
+func resolveVersion(v string, client HTTPClient) (string, error) {
+	cleanVersion := strings.TrimPrefix(v, "go")
+
+	if isCompleteVersion(cleanVersion) {
+		return v, nil
+	}
+
+	if isMajorMinorVersion(cleanVersion) {
+		latestVersion, err := findLatestPatchVersion(cleanVersion, client)
+		if err != nil {
+			return "", fmt.Errorf("failed to find latest patch version for %s: %w", cleanVersion, err)
+		}
+		return latestVersion, nil
+	}
+
+	// If it doesn't match expected patterns, let the download fail naturally
+	return v, nil
+}
+
+// isCompleteVersion checks if a version string is in major.minor.patch format
+func isCompleteVersion(v string) bool {
+	// Regex for major.minor.patch format (e.g., "1.23.4")
+	completeVersionRegex := regexp.MustCompile(`^\d+\.\d+\.\d+$`)
+	return completeVersionRegex.MatchString(v)
+}
+
+// isMajorMinorVersion checks if a version string is in major.minor format
+func isMajorMinorVersion(v string) bool {
+	// Regex for major.minor format (e.g., "1.23")
+	majorMinorRegex := regexp.MustCompile(`^\d+\.\d+$`)
+	return majorMinorRegex.MatchString(v)
+}
+
+// compareVersions compares two Go version strings semantically
+// Returns true if a < b
+func compareVersions(a, b string) bool {
+	a = strings.TrimPrefix(a, "go")
+	b = strings.TrimPrefix(b, "go")
+
+	aParts := strings.Split(a, ".")
+	bParts := strings.Split(b, ".")
+
+	for i := 0; i < 3; i++ {
+		var aVal, bVal int
+
+		if i < len(aParts) {
+			aVal, _ = strconv.Atoi(aParts[i])
+		}
+		if i < len(bParts) {
+			bVal, _ = strconv.Atoi(bParts[i])
+		}
+
+		if aVal != bVal {
+			return aVal < bVal
+		}
+	}
+
+	return false // versions are equal
+}
+
+// findLatestPatchVersion finds the latest patch version for a given major.minor version
+func findLatestPatchVersion(majorMinor string, client HTTPClient) (string, error) {
+	versions, err := fetchAvailableVersions(client)
+	if err != nil {
+		return "", fmt.Errorf("failed to fetch available versions: %w", err)
+	}
+
+	// Filter versions that match the major.minor pattern
+	var matchingVersions []string
+	prefix := "go" + majorMinor + "."
+
+	for _, version := range versions {
+		if strings.HasPrefix(version, prefix) {
+			matchingVersions = append(matchingVersions, version)
+		}
+	}
+
+	if len(matchingVersions) == 0 {
+		return "", fmt.Errorf("no versions found for %s", majorMinor)
+	}
+
+	sort.Slice(matchingVersions, func(i, j int) bool {
+		return compareVersions(matchingVersions[j], matchingVersions[i]) // reverse for newest first
+	})
+
+	return matchingVersions[0], nil
+}
+
+// GoVersion represents a Go version from the API
+type GoVersion struct {
+	Version string `json:"version"`
+	Stable  bool   `json:"stable"`
+	Files   []struct {
+		Filename string `json:"filename"`
+		OS       string `json:"os"`
+		Arch     string `json:"arch"`
+		Version  string `json:"version"`
+		Kind     string `json:"kind"`
+	} `json:"files"`
+}
+
+// fetchAvailableVersions fetches the list of available Go versions
+func fetchAvailableVersions(client HTTPClient) ([]string, error) {
+	req, err := http.NewRequest("GET", BaseURL+"/?mode=json", nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("User-Agent", "gum/1.0")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch versions: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to fetch versions with status %s", resp.Status)
+	}
+
+	var versions []GoVersion
+	if err := json.NewDecoder(resp.Body).Decode(&versions); err != nil {
+		return nil, fmt.Errorf("failed to parse JSON response: %w", err)
+	}
+
+	var versionStrings []string
+	for _, version := range versions {
+		versionStrings = append(versionStrings, version.Version)
+	}
+
+	return versionStrings, nil
 }

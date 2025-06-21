@@ -16,6 +16,7 @@ type MockFileSystem struct {
 	DirError        error
 	RemoveError     error
 	SymlinkMappings map[string]string // Maps symlink name to target
+	FileContents    map[string]string
 }
 
 func (m *MockFileSystem) Stat(name string) (os.FileInfo, error) {
@@ -81,6 +82,28 @@ func (m *MockFileSystem) Remove(name string) error {
 	}
 
 	return nil
+}
+
+func (m *MockFileSystem) EvalSymlinks(path string) (string, error) {
+	if !m.ExistingFiles[path] {
+		return "", os.ErrNotExist
+	}
+
+	if target, ok := m.SymlinkMappings[path]; ok {
+		return target, nil
+	}
+	return path, nil
+}
+
+func (m *MockFileSystem) Open(name string) (io.ReadCloser, error) {
+	if !m.ExistingFiles[name] {
+		return nil, os.ErrNotExist
+	}
+	content, ok := m.FileContents[name]
+	if !ok {
+		content = ""
+	}
+	return io.NopCloser(strings.NewReader(content)), nil
 }
 
 // MockHTTPClient implements HTTPClient for testing
