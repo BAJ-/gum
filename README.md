@@ -27,9 +27,21 @@ export PATH="$HOME/.gum/bin:$PATH"
 
 ### Install a Go version
 
+You can install Go versions in several ways:
+
 ```bash
+# Install a specific version (major.minor.patch)
 gum install 1.24.2
+
+# Install the latest patch version for a major.minor release
+gum install 1.24    # Will install the latest 1.24.x version
+
+# Install with or without the "go" prefix
+gum install go1.24
+gum install 1.24
 ```
+
+When you specify only a major.minor version (like `1.24`), `gum` will automatically find and install the latest patch version available for that release.
 
 ### Use a specific Go version
 

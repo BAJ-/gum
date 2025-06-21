@@ -31,7 +31,16 @@ func NewManager() Manager {
 
 // Install installs a specific Go version
 func (m *VersionManager) Install(v string, w io.Writer) error {
-	v = normaliseVersion(v)
+	resolvedVersion, err := resolveVersion(v, m.httpClient)
+	if err != nil {
+		return fmt.Errorf("failed to resolve version %s: %w", v, err)
+	}
+
+	if resolvedVersion != v {
+		fmt.Fprintf(w, "Resolved %s to %s\n", v, resolvedVersion)
+	}
+
+	v = normaliseVersion(resolvedVersion)
 	versionDir := filepath.Join(m.installDir, v)
 
 	// Check if already installed
